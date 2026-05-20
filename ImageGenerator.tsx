@@ -71,6 +71,25 @@ const predefinedStyles = [
     { value: 'other', label: 'その他', mode: 'both' },
 ];
 
+const styleMixerOptions = {
+    base: [
+        { value: 'picture-book', label: '絵本' },
+        { value: 'infographic', label: '図解インフォグラフィック' },
+        { value: 'ukiyo-e', label: '浮世絵' },
+        { value: 'film-still', label: '映画スチル' },
+        { value: 'fashion-editorial', label: 'ファッション誌' },
+        { value: 'architectural-render', label: '建築レンダリング' },
+    ],
+    accent: [
+        { value: 'contemporary-art', label: '現代アート' },
+        { value: 'deformed-line-art', label: 'デフォルメ線画' },
+        { value: 'glitch', label: 'グリッチ' },
+        { value: 'paper-collage', label: '紙コラージュ' },
+        { value: 'retro-print', label: 'レトロ印刷' },
+        { value: 'surreal', label: 'シュルレアリスム' },
+    ],
+};
+
 const angleOptions = [
     { value: 'auto', label: 'おまかせ', icon: '✨' },
     { value: 'close-up', label: 'アップ', icon: '👀' },
@@ -105,6 +124,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
   const [angle, setAngle] = useState<string>('auto');
   const [aspect, setAspect] = useState<'1:1' | '16:9' | '9:16'>('1:1');
   const [useProModel, setUseProModel] = useState<boolean>(false);
+  const [selectedBaseStyles, setSelectedBaseStyles] = useState<string[]>([]);
+  const [selectedAccentStyles, setSelectedAccentStyles] = useState<string[]>([]);
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('1K');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSummarizing, setIsSummarizing] = useState<boolean>(false);
@@ -221,6 +242,13 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
     try {
         const activeCharacters = characters.filter(c => c.isActive);
         let finalPrompt = prompt;
+        const selectedBases = styleMixerOptions.base.filter((item) => selectedBaseStyles.includes(item.value)).map((item) => item.label);
+        const selectedAccents = styleMixerOptions.accent.filter((item) => selectedAccentStyles.includes(item.value)).map((item) => item.label);
+        const mixInstruction = (selectedBases.length || selectedAccents.length)
+            ? `\n雰囲気ミックス: ${selectedBases.join(' × ') || '指定なし'} ${selectedAccents.length ? `× ${selectedAccents.join(' × ')}` : ''}。\n用途はSNS投稿・商品ビジュアル・記事サムネイル・アプリ紹介を想定し、実用性と新規性を両立した仕上がりにしてください。`
+            : '';
+
+        finalPrompt += mixInstruction;
 
         if (angle !== 'auto' && angleInstructionMap[angle]) {
             finalPrompt += `\n${angleInstructionMap[angle]}`;
@@ -231,7 +259,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
             【品質】：実写と見紛う高品質なポートレート。プラスチックのようなフィギュア感、ドール感を完全に排除してください。
             【質感】：人間味のある生きた肌の質感（細かな毛穴、自然な肌の艶）、瞳の深みのある虹彩、一本一本が独立して描かれた繊細な毛髪。
             【ライティング】：柔らかくドラマチックなシネマティックライティング。自然光の反射や微細なシャドウを正確に描写し、空気感のある美しいボケ（Boke）を背景に加えてください。
-            Professional high-end photography, 8k resolution, realistic human skin texture, natural lighting, cinematic mood.`;
+            Professional high-end photography, 8k resolution, realistic human skin texture, natural lighting, cinematic mood.${mixInstruction}`;
         } else if (style === 'plushie') {
             const charNames = activeCharacters.map(c => `「${c.name}」`).join('や');
             finalPrompt = `${charNames ? `${charNames}をモデルにした、` : ''}最高品質で愛らしい「ぬいぐるみ（Plushie）」を生成してください。
@@ -239,17 +267,17 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
             【素材の質感】：思わず触れたくなるような、ふかふかのボア生地や高品質なモヘアの質感。非常に細かく柔らかな毛並み。
             【ディテール】：丁寧な手縫いのステッチ、小さな肉球の刺繍、リボンなどのアクセサリー。
             【雰囲気】：情景（${prompt}）に基づいた、温かみのあるライティングと、柔らかなクッションに囲まれたような心地よい構図。
-            High quality, intricate plush texture, glistening glass eyes, warm and cozy aesthetic, high resolution.`;
+            High quality, intricate plush texture, glistening glass eyes, warm and cozy aesthetic, high resolution.${mixInstruction}`;
         } else if (style === 'instruction-manual') {
             finalPrompt = `「${prompt}」のシーンを、日本のレトロなゲーム攻略本（公式設定資料集）の1ページとして描いてください。
             【構成】：左側にキャラクターの立ち絵。右側には、魔法のアイテムや武器、不思議な道具などのアイコンが3つほど整然と並んでいます。
-            【デザイン】：下部にはHPやMP、ATKなどの数値が書かれたステータスウィンドウ。全体的に1990年代の高品質な2Dデジタルペイントスタイルで、印刷された紙の質感が少しあります。`;
+            【デザイン】：下部にはHPやMP、ATKなどの数値が書かれたステータスウィンドウ。全体的に1990年代の高品質な2Dデジタルペイントスタイルで、印刷された紙の質感が少しあります。${mixInstruction}`;
         } else if (style === 'picture-book') {
             const charNames = activeCharacters.map(c => `「${c.name}」`).join('と');
             finalPrompt = `木の机の上に置かれた、物語の核心を突く美しい絵本の見開きページ。
             【左ページ】：情景（${prompt}）に基づいた、優しく語りかけるような「手書き風の日本語テキスト（縦書きまたは横書き）」が配置されている。
             【右ページ】：最高品質の水彩画タッチで描かれた、「${prompt}」の幻想的な挿絵。${charNames ? `登場人物の${charNames}が、物語の役割に応じたポーズで生き生きと描かれている。` : ''}
-            【質感とライティング】：古い良質な紙の繊維感、わずかな紙のしわ。窓からの柔らかな木漏れ日がページに落ち、空気中の塵が光り輝いている。 cinematic lighting, masterpieces of children's book illustration, emotional and cozy atmosphere.`;
+            【質感とライティング】：古い良質な紙の繊維感、わずかな紙のしわ。窓からの柔らかな木漏れ日がページに落ち、空気中の塵が光り輝いている。 cinematic lighting, masterpieces of children's book illustration, emotional and cozy atmosphere.${mixInstruction}`;
         } else if (style === 'manga') {
             const charNames = activeCharacters.map(c => `「${c.name}」`).join('や');
             finalPrompt = `「${prompt}」というストーリーを、日本の伝統的な「4コマ漫画（Yonkoma Manga）」形式で描いてください。
@@ -259,14 +287,14 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
             3コマ目（転）：意外な展開、あるいはボケ。
             4コマ目（結）：結末、あるいはツッコミ。
             【ビジュアル】：プロの漫画家による高品質なモノクロ線画とスクリーントーン。${charNames ? `${charNames}が各コマで豊かな表情を見せている。` : ''}
-            【演出】：セリフ吹き出し、漫符（！、？、汗など）、日本語のオノマトペ（ドキドキ、バーンなど）。 Japanese Manga Style.`;
+            【演出】：セリフ吹き出し、漫符（！、？、汗など）、日本語のオノマトペ（ドキドキ、バーンなど）。 Japanese Manga Style.${mixInstruction}`;
         } else if (style === 'sns-icons-12') {
             const charNames = activeCharacters.map(c => `「${c.name}」`).join('や');
             finalPrompt = `SNS用の円形アイコン素材12種類のセットを、1枚の画像に3x4のグリッド形式で描いてください。
             【被写体】：${charNames ? `${charNames}をモデルにした` : ''}可愛い「ちびキャラ（2頭身）」のバストアップ。
             【多様な服装】：12個のアイコンはすべて異なる衣装（私服、和服、騎士、メイド、パジャマ、制服、サイバー、ゴスロリ、ヒーロー、魔法使い、着ぐるみ、タキシード）を着せてください。
             【構成】：各アイコンは円形のパステルカラー背景に収まっており、切り抜きやすいデザイン。
-            【タッチ】：太い主線とはっきりした塗りの日本のアニメ風アイコンスタイル. Vibrant digital art, cute chibi avatar collection.`;
+            【タッチ】：太い主線とはっきりした塗りの日本のアニメ風アイコンスタイル. Vibrant digital art, cute chibi avatar collection.${mixInstruction}`;
         } else {
             const styleLabel = predefinedStyles.find(s => s.value === style)?.label;
             finalPrompt += `\nタッチ: ${styleLabel}`;
@@ -294,6 +322,14 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
     }
   };
 
+  const toggleStyleMixer = (group: 'base' | 'accent', value: string) => {
+    if (group === 'base') {
+      setSelectedBaseStyles((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]);
+      return;
+    }
+    setSelectedAccentStyles((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]);
+  };
+
   const filteredStyles = predefinedStyles.filter(s => s.mode === mode || s.mode === 'both');
   const activeCharacters = characters.filter(c => c.isActive);
 
@@ -301,10 +337,10 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
     <div className="max-w-4xl mx-auto space-y-12 pb-24">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-stone-700">
-            {mode === 'create' ? '空想を書き起こす' : '物語で遊ぶ'}
+            {mode === 'create' ? '画風探索アトリエ' : '画風探索プレイグラウンド'}
         </h1>
         <p className="text-stone-400">
-            {mode === 'create' ? '日常から冒険への扉を開きます。' : '特別なレイアウトや材質で物語を楽しみましょう。'}
+            {mode === 'create' ? '題材にベース画風×アクセント画風を掛け合わせ、まだ見たことのない雰囲気を探索します。' : 'SNS・商品・記事・アプリ紹介に使える、新しい見せ方を試しましょう。'}
         </p>
       </div>
 
@@ -420,6 +456,43 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ mode, characters, setCh
                 </div>
             </section>
           </div>
+
+          <section className="space-y-4 bg-stone-50/80 rounded-[2rem] p-4 border border-stone-100">
+            <div>
+              <h3 className="text-sm font-bold text-stone-700">雰囲気ミキサー</h3>
+              <p className="text-[11px] text-stone-500 mt-1">ベース画風とアクセント画風を複数選択し、用途に効く“新規性ある雰囲気”を素早く発見します。</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-stone-500">かける方（ベース）</p>
+                <div className="flex flex-wrap gap-2">
+                  {styleMixerOptions.base.map((item) => (
+                    <button
+                      key={item.value}
+                      onClick={() => toggleStyleMixer('base', item.value)}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${selectedBaseStyles.includes(item.value) ? 'bg-rose-400 border-rose-400 text-white' : 'bg-white border-stone-200 text-stone-500 hover:border-rose-200'}`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-stone-500">かけられる方（アクセント）</p>
+                <div className="flex flex-wrap gap-2">
+                  {styleMixerOptions.accent.map((item) => (
+                    <button
+                      key={item.value}
+                      onClick={() => toggleStyleMixer('accent', item.value)}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${selectedAccentStyles.includes(item.value) ? 'bg-indigo-400 border-indigo-400 text-white' : 'bg-white border-stone-200 text-stone-500 hover:border-indigo-200'}`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Pro Mode & API Key */}
           <div className="p-4 bg-gradient-to-r from-purple-50 to-rose-50 rounded-[2rem] border border-rose-100">
