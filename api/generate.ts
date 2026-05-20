@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 type UsageRecord = { date: string; count: number };
 const DAILY_LIMIT = 3;
 const usageByIp = new Map<string, UsageRecord>();
-const DEFAULT_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
+const DEFAULT_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
 const FALLBACK_IMAGE_MODEL = 'gemini-2.5-flash-image';
 
 // NOTE: Vercel Serverless instances are ephemeral and memory is not globally/shared or durable.
