@@ -76,6 +76,13 @@ If layout requires copy later, only leave clean empty space for text placement w
   }, [subject, selectedBases, selectedAccents, mixStrength, useCase]);
 
   const canGenerate = subject.trim().length > 0 && selectedBases.length > 0 && selectedAccents.length > 0;
+  const disabledReason = !subject.trim()
+    ? '題材を入力すると生成できます。'
+    : selectedBases.length === 0
+    ? 'ベーススタイルを1つ以上選ぶと生成できます。'
+    : selectedAccents.length === 0
+    ? 'アクセントスタイルを1つ以上選ぶと生成できます。'
+    : '';
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -98,52 +105,73 @@ If layout requires copy later, only leave clean empty space for text placement w
     }
   };
 
-  const chipClass = (active: boolean) =>
-    `px-3 py-2 rounded-full border text-sm ${active ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-700 border-stone-300'}`;
+  const chipClass = (active: boolean) => `chip ${active ? 'is-active' : ''}`;
 
   return (
-    <main className="min-h-screen bg-[#fcfaf6] text-stone-800">
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-bold">雰囲気調合室</h1>
-          <p className="text-stone-600">まだ名前のない絵の雰囲気を探す、小さな画像生成アトリエ。</p>
+    <main className="atelier-page">
+      <div className="atelier-shell">
+        <header className="hero">
+          <h1>雰囲気調合室</h1>
+          <p>まだ名前のない絵の雰囲気を探す、小さな画像生成アトリエ。</p>
         </header>
 
-        <section className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
-          <label className="font-semibold">題材</label>
-          <textarea value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full min-h-28 border border-stone-300 rounded-xl p-3" placeholder="例: カラフルトマトの商品ポップ / Substack用ヘッダー画像 など" />
+        <section className="card">
+          <label className="section-title">題材</label>
+          <p className="section-note">作りたい情景や用途を、メモのように自由に書いてください。</p>
+          <textarea value={subject} onChange={(e) => setSubject(e.target.value)} className="subject-input" placeholder={"例:\n田植えをする人\n育児中の母の限界\nカラフルトマトの商品ポップ\nSubstack用のヘッダー画像"} />
         </section>
 
-        <section className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
-          <p className="font-semibold">ベーススタイル（最大2）</p>
-          <div className="flex flex-wrap gap-2">{baseStyles.map((s) => <button key={s} onClick={() => toggleBase(s)} className={chipClass(selectedBases.includes(s))}>{s}</button>)}</div>
+        <section className="card">
+          <p className="section-title">ベーススタイル（最大2）</p>
+          <p className="section-note">構図・画面設計・主な描画方法を決めます。</p>
+          <div className="chip-grid">{baseStyles.map((s) => <button key={s} onClick={() => toggleBase(s)} className={chipClass(selectedBases.includes(s))}>{s}</button>)}</div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
-          <p className="font-semibold">アクセントスタイル（最大3）</p>
-          <div className="flex flex-wrap gap-2">{accentStyles.map((s) => <button key={s} onClick={() => toggleAccent(s)} className={chipClass(selectedAccents.includes(s))}>{s}</button>)}</div>
+        <section className="card">
+          <p className="section-title">アクセントスタイル（最大3）</p>
+          <p className="section-note">質感・空気感・色・装飾のニュアンスを足します。</p>
+          <div className="chip-grid">{accentStyles.map((s) => <button key={s} onClick={() => toggleAccent(s)} className={chipClass(selectedAccents.includes(s))}>{s}</button>)}</div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
-            <p className="font-semibold">混ぜ方</p>
-            <div className="flex flex-wrap gap-2">{mixStrengths.map((m) => <button key={m} onClick={() => setMixStrength(m)} className={chipClass(mixStrength === m)}>{m}</button>)}</div>
+        <section className="grid-two">
+          <div className="card">
+            <p className="section-title">混ぜ方</p>
+            <p className="section-note">どのくらい大胆に混ぜるかを決めます。</p>
+            <div className="chip-grid">{mixStrengths.map((m) => <button key={m} onClick={() => setMixStrength(m)} className={chipClass(mixStrength === m)}>{m}</button>)}</div>
           </div>
-          <div className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
-            <p className="font-semibold">用途</p>
-            <div className="flex flex-wrap gap-2">{useCases.map((u) => <button key={u} onClick={() => setUseCase(u)} className={chipClass(useCase === u)}>{u}</button>)}</div>
+          <div className="card">
+            <p className="section-title">用途</p>
+            <p className="section-note">見せる場所に合う視認性・余白・レイアウトを調整します。</p>
+            <div className="chip-grid">{useCases.map((u) => <button key={u} onClick={() => setUseCase(u)} className={chipClass(useCase === u)}>{u}</button>)}</div>
           </div>
         </section>
 
-        <div className="flex flex-wrap gap-3">
-          <button onClick={randomizeCombo} className="px-4 py-3 rounded-xl border border-stone-300 bg-white font-semibold">今日の変な組み合わせ</button>
-          <button onClick={() => setOpenPreview((v) => !v)} className="px-4 py-3 rounded-xl border border-stone-300 bg-white font-semibold">プロンプトを見る</button>
-          <button onClick={handleGenerate} disabled={!canGenerate || isLoading} className="px-6 py-3 rounded-xl bg-rose-500 text-white font-bold disabled:opacity-40">{isLoading ? '生成中...' : 'この雰囲気で生成'}</button>
+        <div className="action-row">
+          <button onClick={randomizeCombo} className="sub-button">今日の変な組み合わせ</button>
+          <button onClick={() => setOpenPreview((v) => !v)} className="sub-button">プロンプトを見る</button>
         </div>
 
-        {openPreview && <pre className="bg-stone-900 text-stone-100 text-xs p-4 rounded-2xl whitespace-pre-wrap">{finalPrompt}</pre>}
-        {error && <p className="text-red-600">{error}</p>}
-        {generatedImage && <img src={generatedImage} alt="generated" className="w-full rounded-2xl border border-stone-200" />}
+        {openPreview && (
+          <section className="card">
+            <div className="preview-head">
+              <p className="section-title">生成プロンプト</p>
+              <button
+                className="sub-button"
+                onClick={() => navigator.clipboard?.writeText(finalPrompt)}
+              >
+                コピー
+              </button>
+            </div>
+            <pre className="prompt-preview">{finalPrompt}</pre>
+          </section>
+        )}
+
+        <section className="generate-zone">
+          <button onClick={handleGenerate} disabled={!canGenerate || isLoading} className="primary-button">{isLoading ? '生成中...' : 'この雰囲気で生成'}</button>
+          {!canGenerate && <p className="disabled-note">{disabledReason}</p>}
+          {error && <p className="error-note">{error}</p>}
+        </section>
+        {generatedImage && <img src={generatedImage} alt="generated" className="result-image" />}
       </div>
     </main>
   );
