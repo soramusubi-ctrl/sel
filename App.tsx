@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 type MixStrength = 'ほんのり' | '半分ずつ' | '大胆に' | '実験的' | '商用向けに整える';
 type UseCase = 'SNS投稿' | 'サムネイル' | 'Substackヘッダー' | '4コマ表紙' | '解説カード' | '商品ポップ' | 'LINEスタンプ' | 'アプリ紹介画像' | 'A4印刷';
@@ -7,6 +7,8 @@ const baseStyles = ['絵本', '図解インフォグラフィック', '漫画', 
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
 const mixStrengths: MixStrength[] = ['ほんのり', '半分ずつ', '大胆に', '実験的', '商用向けに整える'];
 const useCases: UseCase[] = ['SNS投稿', 'サムネイル', 'Substackヘッダー', '4コマ表紙', '解説カード', '商品ポップ', 'LINEスタンプ', 'アプリ紹介画像', 'A4印刷'];
+const USAGE_KEY = 'atelier-daily-generate-usage';
+const dailyLimit = 3;
 
 const mixStrengthMap: Record<MixStrength, string> = {
   'ほんのり': 'Apply the accent style subtly, only as mood, texture, and decorative detail.',
@@ -38,6 +40,29 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [usageCount, setUsageCount] = useState(0);
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const raw = localStorage.getItem(USAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+      setUsageCount(0);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.date !== today) {
+        localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+        setUsageCount(0);
+      } else {
+        setUsageCount(Math.max(0, Number(parsed.count) || 0));
+      }
+    } catch {
+      localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+      setUsageCount(0);
+    }
+  }, []);
 
   const toggleBase = (style: string) => {
     setSelectedBases((prev) => (prev.includes(style) ? prev.filter((s) => s !== style) : prev.length >= 2 ? [...prev.slice(1), style] : [...prev, style]));
@@ -75,13 +100,17 @@ Avoid garbled text: do not render text inside the image by default.
 If layout requires copy later, only leave clean empty space for text placement without drawing actual letters.`;
   }, [subject, selectedBases, selectedAccents, mixStrength, useCase]);
 
-  const canGenerate = subject.trim().length > 0 && selectedBases.length > 0 && selectedAccents.length > 0;
+  const remainingCount = Math.max(0, dailyLimit - usageCount);
+  const isLimitReached = remainingCount <= 0;
+  const canGenerate = subject.trim().length > 0 && selectedBases.length > 0 && selectedAccents.length > 0 && !isLimitReached;
   const disabledReason = !subject.trim()
     ? '題材を入力すると生成できます。'
     : selectedBases.length === 0
     ? 'ベーススタイルを1つ以上選ぶと生成できます。'
     : selectedAccents.length === 0
     ? 'アクセントスタイルを1つ以上選ぶと生成できます。'
+    : isLimitReached
+    ? '本日の無料生成回数（3回）に達しました。'
     : '';
 
   const handleGenerate = async () => {
@@ -98,6 +127,10 @@ If layout requires copy later, only leave clean empty space for text placement w
       if (!response.ok) throw new Error('failed');
       const data = await response.json();
       setGeneratedImage(`data:image/png;base64,${data.imageBase64}`);
+      const today = new Date().toISOString().slice(0, 10);
+      const nextCount = usageCount + 1;
+      setUsageCount(nextCount);
+      localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: nextCount }));
     } catch {
       setError('生成に失敗しました。しばらくしてから再度お試しください。');
     } finally {
@@ -111,8 +144,13 @@ If layout requires copy later, only leave clean empty space for text placement w
     <main className="atelier-page">
       <div className="atelier-shell">
         <header className="hero">
-          <h1>雰囲気調合室</h1>
+          <h1><img src="/assets/icon-bottle.svg" alt="" className="hero-icon" />雰囲気調合室<img src="/assets/icon-spark.svg" alt="" className="hero-icon" /></h1>
           <p>まだ名前のない絵の雰囲気を探す、小さな画像生成アトリエ。</p>
+          <div className="hero-tools">
+            <img src="/assets/icon-palette.svg" alt="" />
+            <img src="/assets/icon-bottle.svg" alt="" />
+            <img src="/assets/icon-spark.svg" alt="" />
+          </div>
         </header>
 
         <section className="card">
@@ -162,15 +200,25 @@ If layout requires copy later, only leave clean empty space for text placement w
                 コピー
               </button>
             </div>
-            <pre className="prompt-preview">{finalPrompt}</pre>
+            <div className="framed-surface">
+              <img src="/assets/card-frame.svg" alt="" className="frame-overlay" />
+              <pre className="prompt-preview">{finalPrompt}</pre>
+            </div>
           </section>
         )}
 
         <section className="generate-zone">
           <button onClick={handleGenerate} disabled={!canGenerate || isLoading} className="primary-button">{isLoading ? '生成中...' : 'この雰囲気で生成'}</button>
+          <p className="disabled-note">本日の無料生成: {usageCount}/{dailyLimit}（残り {remainingCount} 回）</p>
           {!canGenerate && <p className="disabled-note">{disabledReason}</p>}
           {error && <p className="error-note">{error}</p>}
         </section>
+        {!generatedImage && (
+          <div className="result-placeholder">
+            <img src="/assets/empty-preview.svg" alt="生成前プレビュー" className="result-image" />
+            <p>まだ名前のない絵を待っています。</p>
+          </div>
+        )}
         {generatedImage && <img src={generatedImage} alt="generated" className="result-image" />}
       </div>
     </main>
