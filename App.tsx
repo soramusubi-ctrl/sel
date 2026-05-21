@@ -5,7 +5,7 @@ type MixStrength = 'ほんのり' | '半分ずつ' | '大胆に' | '実験的' |
 type UseCase = 'SNS投稿' | '投稿表紙' | '記事ヘッダー' | 'エッセイ挿絵' | '解説カード' | '商品ポップ' | '紹介画像' | 'LPキービジュアル' | '印刷カード';
 type RenderingType = 'デフォルメ' | 'イラスト寄り' | 'アニメ寄り' | 'セミリアル' | 'リアル寄り' | '写真風';
 type AtmosphereType = 'おまかせ' | '朝の光' | '夕方の光' | '逆光' | 'やわらかい自然光' | '映画のような光' | 'スタジオ撮影風' | '雨上がり' | '冬の透明感' | '夏の湿度' | '夜のネオン';
-type OutputSize = 'SNS投稿 1:1' | '縦長投稿 4:5' | 'ストーリー 9:16' | '横長サムネ 16:9' | '記事ヘッダー 3:1' | '印刷カード A4';
+type AspectRatio = '正方形 1:1' | '縦長投稿 4:5' | 'ストーリー 9:16' | '横長 16:9' | '記事ヘッダー 3:1' | 'A4縦 1:1.414';
 
 const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌写真', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', '淡彩ペン画'] as const;
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
@@ -14,7 +14,15 @@ const useCases: UseCase[] = ['SNS投稿', '投稿表紙', '記事ヘッダー', 
 const renderingTypes: RenderingType[] = ['デフォルメ', 'イラスト寄り', 'アニメ寄り', 'セミリアル', 'リアル寄り', '写真風'];
 const textures = ['艶のあるタッチ', 'マットな質感', '透明感', 'やわらかい発光感', '高級感のある光沢', 'フィルム写真風', '淡い粒子感', 'なめらかなデジタルペイント', 'ざらっとした紙質感'] as const;
 const atmosphereTypes: AtmosphereType[] = ['おまかせ', '朝の光', '夕方の光', '逆光', 'やわらかい自然光', '映画のような光', 'スタジオ撮影風', '雨上がり', '冬の透明感', '夏の湿度', '夜のネオン'];
-const outputSizes: OutputSize[] = ['SNS投稿 1:1', '縦長投稿 4:5', 'ストーリー 9:16', '横長サムネ 16:9', '記事ヘッダー 3:1', '印刷カード A4'];
+const aspectRatios: AspectRatio[] = ['正方形 1:1', '縦長投稿 4:5', 'ストーリー 9:16', '横長 16:9', '記事ヘッダー 3:1', 'A4縦 1:1.414'];
+const aspectRatioMap: Record<AspectRatio, string> = {
+  '正方形 1:1': '1:1 square composition',
+  '縦長投稿 4:5': '4:5',
+  'ストーリー 9:16': '9:16',
+  '横長 16:9': '16:9',
+  '記事ヘッダー 3:1': '3:1',
+  'A4縦 1:1.414': '1:1.414 portrait composition',
+};
 const USAGE_KEY = 'atelier-daily-generate-usage';
 const dailyLimit = 3;
 
@@ -61,7 +69,7 @@ const App: React.FC = () => {
   const [selectedRenderingType, setSelectedRenderingType] = useState<RenderingType>('イラスト寄り');
   const [selectedTextures, setSelectedTextures] = useState<string[]>([]);
   const [selectedAtmosphere, setSelectedAtmosphere] = useState<AtmosphereType>('おまかせ');
-  const [selectedOutputSize, setSelectedOutputSize] = useState<OutputSize>('SNS投稿 1:1');
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>('正方形 1:1');
   const [openPreview, setOpenPreview] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -107,7 +115,7 @@ const App: React.FC = () => {
     setSelectedRenderingType(renderingTypes[Math.floor(Math.random() * renderingTypes.length)]);
     setSelectedTextures(pick(textures, Math.floor(Math.random() * 2) + 1));
     setSelectedAtmosphere(atmosphereTypes[Math.floor(Math.random() * atmosphereTypes.length)]);
-    setSelectedOutputSize(outputSizes[Math.floor(Math.random() * outputSizes.length)]);
+    setSelectedAspectRatio(aspectRatios[Math.floor(Math.random() * aspectRatios.length)]);
   };
 
   const toggleTexture = (texture: string) => {
@@ -124,7 +132,7 @@ const App: React.FC = () => {
 Output type: single still image.
 Subject: ${subject || '（題材を入力してください）'}
 Use case: ${useCase}
-Output size: ${selectedOutputSize}
+Aspect ratio: ${aspectRatioMap[selectedAspectRatio]}
 Base style(s): ${baseLine}
 Rendering type: ${effectiveRenderingType}
 Accent style(s): ${accentLine}
@@ -134,7 +142,7 @@ Mix method: ${mixStrength}
 
 Composition and spacing:
 ${useCaseMap[useCase]}
-Keep stable margins and a clear focal hierarchy appropriate for the selected output size.
+Keep stable margins and a clear focal hierarchy appropriate for the selected aspect ratio.
 
 Style balance:
 Base style defines the overall composition, visual structure, layout, and primary rendering method.
@@ -151,7 +159,7 @@ Restrictions:
 Avoid garbled text: do not render text inside the image by default.
 If layout requires copy later, only leave clean empty space for text placement without drawing actual letters.
 If Rendering type is photographic, do not create illustration, digital painting, anime, manga, cartoon, or drawn line art.`;
-  }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere, selectedOutputSize]);
+  }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere, selectedAspectRatio]);
 
   const remainingCount = Math.max(0, dailyLimit - usageCount);
   const isLimitReached = remainingCount <= 0;
@@ -172,10 +180,11 @@ If Rendering type is photographic, do not create illustration, digital painting,
     setIsLoading(true);
     setGeneratedImage(null);
     try {
+      const aspectRatio = aspectRatioMap[selectedAspectRatio].split(' ')[0];
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: finalPrompt }),
+        body: JSON.stringify({ prompt: finalPrompt, aspectRatio }),
       });
       if (!response.ok) throw new Error('failed');
       const data = await response.json();
@@ -249,9 +258,10 @@ If Rendering type is photographic, do not create illustration, digital painting,
           </div>
         </section>
         <section className="card">
-          <p className="section-title with-icon"><img src="/assets/icon-usecase.svg" alt="" />出力サイズ</p>
-          <p className="section-note">投稿・記事・印刷に合わせて、画像の比率と余白を整えます。</p>
-          <div className="chip-grid">{outputSizes.map((s) => <button key={s} onClick={() => setSelectedOutputSize(s)} className={chipClass(selectedOutputSize === s)}>{s}</button>)}</div>
+          <p className="section-title with-icon"><img src="/assets/icon-usecase.svg" alt="" />画像比率</p>
+          <p className="section-note">投稿・記事・印刷に合わせて、構図の縦横比を整えます。</p>
+          <p className="section-note">生成結果の比率に反映されます。</p>
+          <div className="chip-grid">{aspectRatios.map((s) => <button key={s} onClick={() => setSelectedAspectRatio(s)} className={chipClass(selectedAspectRatio === s)}>{s}</button>)}</div>
         </section>
         <section className="grid-two">
           <div className="card">

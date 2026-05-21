@@ -27,8 +27,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const limit = checkAndConsumeDailyLimit(ip);
     if (!limit.allowed) return res.status(429).json({ error: 'Daily generation limit reached' });
 
-    const { prompt } = req.body ?? {};
+    const { prompt, aspectRatio } = req.body ?? {};
     if (!prompt || typeof prompt !== 'string') return res.status(400).json({ error: 'Invalid request' });
+    const resolvedAspectRatio = typeof aspectRatio === 'string' ? aspectRatio : '1:1';
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Server configuration error' });
@@ -37,6 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: prompt }] },
+      config: {
+        imageConfig: {
+          aspectRatio: resolvedAspectRatio as any,
+        },
+      },
     });
     const part = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
     const imageBase64 = part?.inlineData?.data;
