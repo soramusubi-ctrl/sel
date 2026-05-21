@@ -6,7 +6,7 @@ type RenderingType = 'デフォルメ' | 'イラスト寄り' | 'アニメ寄り
 type AtmosphereType = 'おまかせ' | '朝の光' | '夕方の光' | '逆光' | 'やわらかい自然光' | '映画のような光' | 'スタジオ撮影風' | '雨上がり' | '冬の透明感' | '夏の湿度' | '夜のネオン';
 type OutputSize = 'SNS投稿 1:1' | '縦長投稿 4:5' | 'ストーリー 9:16' | '横長サムネ 16:9' | '記事ヘッダー 3:1' | '印刷カード A4';
 
-const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌挿絵', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風'] as const;
+const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌写真', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風'] as const;
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
 const mixStrengths: MixStrength[] = ['ほんのり', '半分ずつ', '大胆に', '実験的', '商用向けに整える'];
 const useCases: UseCase[] = ['SNS投稿', '投稿表紙', '記事ヘッダー', 'エッセイ挿絵', '解説カード', '商品ポップ', '紹介画像', 'LPキービジュアル', '印刷カード'];
@@ -43,7 +43,7 @@ const renderingOpeningMap: Record<RenderingType, string> = {
   'アニメ寄り': 'Create an anime-inspired illustration.',
   'セミリアル': 'Create a semi-realistic illustration.',
   'リアル寄り': 'Create a realistic-leaning illustration.',
-  '写真風': 'Create a photographic-style image.',
+  '写真風': 'Create a photorealistic editorial photograph. It must look like a real camera photo, not an illustration, not digital painting, not anime, not concept art.',
 };
 
 const renderingGuideMap: Record<RenderingType, string> = {
@@ -52,7 +52,12 @@ const renderingGuideMap: Record<RenderingType, string> = {
   'アニメ寄り': 'Use anime-inspired stylization with expressive shapes, clean visual rhythm, and appealing character design.',
   'セミリアル': 'Use a semi-realistic rendering style that keeps the image artistic while adding believable depth, volume, lighting, and material detail.',
   'リアル寄り': 'Use a realistic-leaning rendering style with more natural anatomy, perspective, texture, and environmental detail.',
-  '写真風': 'Use a photographic impression with natural lighting, lens-like depth, and realistic surface detail while preserving the selected art direction.',
+  '写真風': 'Use real photographic cues: natural lens depth, camera exposure, real skin/material texture, physically plausible lighting, realistic shadows, and no drawn outlines. Avoid painterly brushwork, illustration texture, anime features, and fantasy concept-art rendering.',
+};
+
+const baseStyleGuideMap: Partial<Record<(typeof baseStyles)[number], string>> = {
+  '雑誌写真': 'Use a high-quality editorial magazine photograph style with real camera optics, natural lens depth, realistic material texture, plausible lighting, and no illustrated outlines. Treat this as photography first, not illustration.',
+  'バンドデシネ風': 'Use refined European bande dessinee influence with thin delicate ink lines, uneven fine pen strokes, subtle hatching, pale watercolor wash, airy spacing, and mature editorial restraint. Avoid thick comic outlines, heavy cartoon contour, manga-like bold linework, and overly saturated flat colors.',
 };
 
 const outputSizeMap: Record<OutputSize, string> = {
@@ -127,12 +132,15 @@ const App: React.FC = () => {
   };
 
   const finalPrompt = useMemo(() => {
+    const hasMagazinePhoto = selectedBases.includes('雑誌写真');
+    const effectiveRenderingType = hasMagazinePhoto ? '写真風' : selectedRenderingType;
     const baseLine = selectedBases.length ? selectedBases.join(' × ') : '（未選択）';
+    const baseGuideLine = selectedBases.map((base) => baseStyleGuideMap[base as (typeof baseStyles)[number]]).filter(Boolean).join('\n');
     const accentLine = selectedAccents.length ? selectedAccents.join(' × ') : '（未選択）';
     const textureLine = selectedTextures.length ? selectedTextures.join(' × ') : 'None';
     const atmosphereLine = selectedAtmosphere === 'おまかせ' ? 'Auto, choose the most suitable light and atmosphere for the subject and use case.' : selectedAtmosphere;
 
-    return `${renderingOpeningMap[selectedRenderingType]}
+    return `${renderingOpeningMap[effectiveRenderingType]}
 
 Subject:
 ${subject || '（題材を入力してください）'}
@@ -147,10 +155,11 @@ ${outputSizeMap[selectedOutputSize]}
 
 Base style:
 ${baseLine}
+${baseGuideLine}
 
 Rendering type:
-${selectedRenderingType}
-${renderingGuideMap[selectedRenderingType]}
+${effectiveRenderingType}
+${renderingGuideMap[effectiveRenderingType]}
 
 Accent style:
 ${accentLine}
@@ -180,7 +189,8 @@ Blend everything into one coherent visual language.
 
 Restrictions:
 Do not render text inside the image.
-Do not add logos, watermarks, random letters, unreadable symbols, or unrelated objects.`;
+Do not add logos, watermarks, random letters, unreadable symbols, or unrelated objects.
+If Rendering type is photographic, do not create illustration, digital painting, anime, manga, cartoon, or drawn line art.`;
   }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere, selectedOutputSize]);
 
   const remainingCount = Math.max(0, dailyLimit - usageCount);
