@@ -141,6 +141,34 @@
   border-color: #e1b6ad;
   background: #fff6f4;
 }
+.loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 18px 16px 20px;
+  border: 1px solid #ddd3c3;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff6eb 100%);
+  box-shadow: 0 8px 22px rgba(74, 52, 39, .08);
+  text-align: center;
+}
+.loading-illustration {
+  width: min(100%, 420px);
+  border-radius: 16px;
+  border: 1px solid #e1d5c8;
+  background: #fffaf1;
+  box-shadow: 0 5px 16px rgba(74, 52, 39, .1);
+}
+.loading-title {
+  margin: 4px 0 0;
+  color: #4a382d;
+  font-weight: 700;
+}
+.loading-note {
+  margin: 0;
+  color: #7a6c5c;
+  font-size: .92rem;
+}
 @media (min-width: 720px) {
   .recipe-item {
     grid-template-columns: minmax(0, 1fr) auto;
