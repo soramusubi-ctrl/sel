@@ -10,7 +10,6 @@ type Recipe = {
   id: string;
   name: string;
   createdAt: string;
-  subject: string;
   selectedBases: string[];
   selectedAccents: string[];
   mixStrength: MixStrength;
@@ -188,7 +187,7 @@ If Rendering type is photographic, do not create illustration, digital painting,
   const remainingCount = Math.max(0, dailyLimit - usageCount);
   const isLimitReached = remainingCount <= 0;
   const canGenerate = subject.trim().length > 0 && selectedBases.length > 0 && selectedAccents.length > 0 && !isLimitReached;
-  const canSaveRecipe = subject.trim().length > 0 && selectedBases.length > 0 && selectedAccents.length > 0;
+  const canSaveRecipe = selectedBases.length > 0 && selectedAccents.length > 0;
   const disabledReason = !subject.trim()
     ? '題材を入力すると生成できます。'
     : selectedBases.length === 0
@@ -200,22 +199,25 @@ If Rendering type is photographic, do not create illustration, digital painting,
     : '';
 
   const makeRecipeName = () => {
-    const subjectLabel = subject.trim().slice(0, 18) || '題材なし';
-    const baseLabel = selectedBases[0] || '未選択';
-    const accentLabel = selectedAccents[0] || '雰囲気';
-    return `${subjectLabel} / ${baseLabel} × ${accentLabel}`;
+    const baseLabel = selectedBases.join(' × ') || '未選択';
+    const accentLabel = selectedAccents.join(' × ') || '雰囲気';
+    return `${baseLabel} + ${accentLabel} / ${useCase}`;
+  };
+
+  const makeRecipePrompt = () => {
+    const subjectLine = `Subject: ${subject || '（題材を入力してください）'}`;
+    return finalPrompt.replace(subjectLine, 'Subject: {題材を入力してください}');
   };
 
   const handleSaveRecipe = () => {
     if (!canSaveRecipe) {
-      setRecipeNotice('題材・ベース・アクセントを選ぶと保存できます。');
+      setRecipeNotice('ベース・アクセントを選ぶと保存できます。');
       return;
     }
     const recipe: Recipe = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: makeRecipeName(),
       createdAt: new Date().toISOString(),
-      subject,
       selectedBases,
       selectedAccents,
       mixStrength,
@@ -224,15 +226,14 @@ If Rendering type is photographic, do not create illustration, digital painting,
       selectedTextures,
       selectedAtmosphere,
       selectedOutputSize,
-      prompt: finalPrompt,
+      prompt: makeRecipePrompt(),
     };
     const next = [recipe, ...savedRecipes].slice(0, 30);
     persistRecipes(next);
-    setRecipeNotice('調合レシピを保存しました。');
+    setRecipeNotice('調合レシピを保存しました。題材は保存していません。');
   };
 
   const handleLoadRecipe = (recipe: Recipe) => {
-    setSubject(recipe.subject);
     setSelectedBases(recipe.selectedBases);
     setSelectedAccents(recipe.selectedAccents);
     setMixStrength(recipe.mixStrength);
@@ -241,7 +242,7 @@ If Rendering type is photographic, do not create illustration, digital painting,
     setSelectedTextures(recipe.selectedTextures);
     setSelectedAtmosphere(recipe.selectedAtmosphere);
     setSelectedOutputSize(recipe.selectedOutputSize);
-    setRecipeNotice('レシピを呼び出しました。');
+    setRecipeNotice('レシピを呼び出しました。題材はそのままです。');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -388,7 +389,7 @@ If Rendering type is photographic, do not create illustration, digital painting,
         {savedRecipes.length > 0 && (
           <section className="card recipe-card">
             <p className="section-title with-icon"><img src="/assets/icon-bottle.svg" alt="" />保存した調合レシピ</p>
-            <p className="section-note">気に入った組み合わせを、このブラウザだけに保存しています。</p>
+            <p className="section-note">題材は保存せず、気に入った雰囲気の組み合わせだけをこのブラウザに保存しています。</p>
             <div className="recipe-list">
               {savedRecipes.map((recipe) => (
                 <article key={recipe.id} className="recipe-item">
