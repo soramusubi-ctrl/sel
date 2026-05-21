@@ -6,7 +6,7 @@ type RenderingType = 'デフォルメ' | 'イラスト寄り' | 'アニメ寄り
 type AtmosphereType = 'おまかせ' | '朝の光' | '夕方の光' | '逆光' | 'やわらかい自然光' | '映画のような光' | 'スタジオ撮影風' | '雨上がり' | '冬の透明感' | '夏の湿度' | '夜のネオン';
 type OutputSize = 'SNS投稿 1:1' | '縦長投稿 4:5' | 'ストーリー 9:16' | '横長サムネ 16:9' | '記事ヘッダー 3:1' | '印刷カード A4';
 
-const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌挿絵', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風'] as const;
+const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌写真', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風'] as const;
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
 const mixStrengths: MixStrength[] = ['ほんのり', '半分ずつ', '大胆に', '実験的', '商用向けに整える'];
 const useCases: UseCase[] = ['SNS投稿', '投稿表紙', '記事ヘッダー', 'エッセイ挿絵', '解説カード', '商品ポップ', '紹介画像', 'LPキービジュアル', '印刷カード'];
@@ -35,6 +35,20 @@ const useCaseMap: Record<UseCase, string> = {
   '紹介画像': 'Craft a polished modern introduction visual suitable for indie products, apps, or service overviews.',
   'LPキービジュアル': 'Deliver a strong first-impression hero composition that communicates brand world, subject focus, and narrative energy.',
   '印刷カード': 'Keep print-friendly balance with stable margins, legibility, and whitespace suitable for handout/card usage.',
+};
+
+const renderingTypeLeadMap: Record<RenderingType, string> = {
+  'デフォルメ': 'Create a stylized illustration.',
+  'イラスト寄り': 'Create a polished illustration.',
+  'アニメ寄り': 'Create an anime-inspired illustration.',
+  'セミリアル': 'Create a semi-realistic illustration.',
+  'リアル寄り': 'Create a realistic-leaning illustration.',
+  '写真風': 'Create a photorealistic editorial photograph. It must look like a real camera photo, not an illustration, not digital painting, not anime, not concept art.',
+};
+
+const baseStyleGuideMap: Partial<Record<(typeof baseStyles)[number], string>> = {
+  '雑誌写真': 'Use a high-quality editorial magazine photograph style with real camera optics, natural lens depth, realistic material texture, plausible lighting, and no illustrated outlines. Treat this as photography first, not illustration.',
+  'バンドデシネ風': 'Use refined European bande dessinee influence with thin delicate ink lines, uneven fine pen strokes, subtle hatching, pale watercolor wash, airy spacing, and mature editorial restraint. Avoid thick comic outlines, heavy cartoon contour, manga-like bold linework, and overly saturated flat colors.',
 };
 
 const App: React.FC = () => {
@@ -100,18 +114,28 @@ const App: React.FC = () => {
   };
 
   const finalPrompt = useMemo(() => {
+    const effectiveRenderingType: RenderingType = selectedBases.includes('雑誌写真') ? '写真風' : selectedRenderingType;
+    const lead = renderingTypeLeadMap[effectiveRenderingType];
     const baseLine = selectedBases.length ? selectedBases.join(' × ') : '（未選択）';
     const accentLine = selectedAccents.length ? selectedAccents.join(' × ') : '（未選択）';
-    return `Subject: ${subject || '（題材を入力してください）'}
-Base style(s): ${baseLine}
-Accent style(s): ${accentLine}
-Mix method: ${mixStrength}
+    const baseStyleGuides = selectedBases.map((b) => baseStyleGuideMap[b as (typeof baseStyles)[number]]).filter(Boolean).join('\n');
+    return `${lead}
+Output type: single still image.
+Subject: ${subject || '（題材を入力してください）'}
 Use case: ${useCase}
-Rendering type: ${selectedRenderingType}
+Output size: ${selectedOutputSize}
+Base style(s): ${baseLine}
+Rendering type: ${effectiveRenderingType}
+Accent style(s): ${accentLine}
 Texture: ${selectedTextures.length ? selectedTextures.join(' × ') : '（未選択）'}
 Light and atmosphere: ${selectedAtmosphere}
-Output size: ${selectedOutputSize}
+Mix method: ${mixStrength}
 
+Composition and spacing:
+${useCaseMap[useCase]}
+Keep stable margins and a clear focal hierarchy appropriate for the selected output size.
+
+Style balance:
 Base style defines the overall composition, visual structure, layout, and primary rendering method.
 Accent style should influence texture, mood, decorative details, color feeling, and small visual surprises.
 Do not let the accent style overpower the base style.
@@ -119,11 +143,13 @@ Blend them harmoniously into one coherent visual language.
 Rendering type controls the degree of realism, stylization, and character detail.
 Texture controls surface finish, brush feel, material impression, grain, gloss, and softness.
 Light and atmosphere controls time of day, air, mood, shadow, and emotional temperature.
-
 ${mixStrengthMap[mixStrength]}
-${useCaseMap[useCase]}
+${baseStyleGuides}
+
+Restrictions:
 Avoid garbled text: do not render text inside the image by default.
-If layout requires copy later, only leave clean empty space for text placement without drawing actual letters.`;
+If layout requires copy later, only leave clean empty space for text placement without drawing actual letters.
+If Rendering type is photographic, do not create illustration, digital painting, anime, manga, cartoon, or drawn line art.`;
   }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere, selectedOutputSize]);
 
   const remainingCount = Math.max(0, dailyLimit - usageCount);
