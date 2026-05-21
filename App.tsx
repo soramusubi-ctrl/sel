@@ -7,6 +7,21 @@ type RenderingType = 'デフォルメ' | 'イラスト寄り' | 'アニメ寄り
 type AtmosphereType = 'おまかせ' | '朝の光' | '夕方の光' | '逆光' | 'やわらかい自然光' | '映画のような光' | 'スタジオ撮影風' | '雨上がり' | '冬の透明感' | '夏の湿度' | '夜のネオン';
 type AspectRatio = '正方形 1:1' | '縦長投稿 4:5' | 'ストーリー 9:16' | '横長 16:9' | '記事ヘッダー 3:1' | 'A4縦 1:1.414';
 
+type Recipe = {
+  id: string;
+  name: string;
+  createdAt: string;
+  selectedBases: string[];
+  selectedAccents: string[];
+  mixStrength: MixStrength;
+  useCase: UseCase;
+  selectedRenderingType: RenderingType;
+  selectedTextures: string[];
+  selectedAtmosphere: AtmosphereType;
+  selectedAspectRatio: AspectRatio;
+  prompt: string;
+};
+
 const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌写真', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', '淡彩ペン画'] as const;
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
 const mixStrengths: MixStrength[] = ['ほんのり', '半分ずつ', '大胆に', '実験的', '商用向けに整える'];
@@ -24,6 +39,7 @@ const aspectRatioMap: Record<AspectRatio, string> = {
   'A4縦 1:1.414': '1:1.414 portrait composition',
 };
 const USAGE_KEY = 'atelier-daily-generate-usage';
+const RECIPES_KEY = 'atelier-saved-recipes';
 const dailyLimit = 3;
 
 const mixStrengthMap: Record<MixStrength, string> = {
@@ -75,6 +91,8 @@ const App: React.FC = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usageCount, setUsageCount] = useState(0);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [recipeNotice, setRecipeNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -82,21 +100,35 @@ const App: React.FC = () => {
     if (!raw) {
       localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
       setUsageCount(0);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed.date !== today) {
+    } else {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.date !== today) {
+          localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+          setUsageCount(0);
+        } else {
+          setUsageCount(Math.max(0, Number(parsed.count) || 0));
+        }
+      } catch {
         localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
         setUsageCount(0);
-      } else {
-        setUsageCount(Math.max(0, Number(parsed.count) || 0));
       }
+    }
+
+    try {
+      const rawRecipes = localStorage.getItem(RECIPES_KEY);
+      const parsedRecipes = rawRecipes ? JSON.parse(rawRecipes) : [];
+      setSavedRecipes(Array.isArray(parsedRecipes) ? parsedRecipes : []);
     } catch {
-      localStorage.setItem(USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
-      setUsageCount(0);
+      localStorage.setItem(RECIPES_KEY, JSON.stringify([]));
+      setSavedRecipes([]);
     }
   }, []);
+
+  const persistRecipes = (recipes: Recipe[]) => {
+    setSavedRecipes(recipes);
+    localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes));
+  };
 
   const toggleBase = (style: string) => {
     setSelectedBases((prev) => (prev.includes(style) ? prev.filter((s) => s !== style) : prev.length >= 2 ? [...prev.slice(1), style] : [...prev, style]));
@@ -164,6 +196,7 @@ If Rendering type is photographic, do not create illustration, digital painting,
   const remainingCount = Math.max(0, dailyLimit - usageCount);
   const isLimitReached = remainingCount <= 0;
   const canGenerate = subject.trim().length > 0 && selectedBases.length > 0 && selectedAccents.length > 0 && !isLimitReached;
+  const canSaveRecipe = selectedBases.length > 0 && selectedAccents.length > 0;
   const disabledReason = !subject.trim()
     ? '題材を入力すると生成できます。'
     : selectedBases.length === 0
@@ -173,6 +206,64 @@ If Rendering type is photographic, do not create illustration, digital painting,
     : isLimitReached
     ? '本日の無料生成回数（3回）に達しました。'
     : '';
+
+  const makeRecipeName = () => {
+    const baseLabel = selectedBases.join(' × ') || '未選択';
+    const accentLabel = selectedAccents.join(' × ') || '雰囲気';
+    return `${baseLabel} + ${accentLabel} / ${useCase}`;
+  };
+
+  const makeRecipePrompt = () => {
+    const subjectLine = `Subject: ${subject || '（題材を入力してください）'}`;
+    return finalPrompt.replace(subjectLine, 'Subject: {題材を入力してください}');
+  };
+
+  const handleSaveRecipe = () => {
+    if (!canSaveRecipe) {
+      setRecipeNotice('ベース・アクセントを選ぶと保存できます。');
+      return;
+    }
+    const recipe: Recipe = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: makeRecipeName(),
+      createdAt: new Date().toISOString(),
+      selectedBases,
+      selectedAccents,
+      mixStrength,
+      useCase,
+      selectedRenderingType,
+      selectedTextures,
+      selectedAtmosphere,
+      selectedAspectRatio,
+      prompt: makeRecipePrompt(),
+    };
+    const next = [recipe, ...savedRecipes].slice(0, 30);
+    persistRecipes(next);
+    setRecipeNotice('調合レシピを保存しました。題材は保存していません。');
+  };
+
+  const handleLoadRecipe = (recipe: Recipe) => {
+    setSelectedBases(recipe.selectedBases);
+    setSelectedAccents(recipe.selectedAccents);
+    setMixStrength(recipe.mixStrength);
+    setUseCase(recipe.useCase);
+    setSelectedRenderingType(recipe.selectedRenderingType);
+    setSelectedTextures(recipe.selectedTextures);
+    setSelectedAtmosphere(recipe.selectedAtmosphere);
+    setSelectedAspectRatio(recipe.selectedAspectRatio);
+    setRecipeNotice('レシピを呼び出しました。題材はそのままです。');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteRecipe = (id: string) => {
+    persistRecipes(savedRecipes.filter((recipe) => recipe.id !== id));
+    setRecipeNotice('レシピを削除しました。');
+  };
+
+  const handleCopyRecipePrompt = async (recipe: Recipe) => {
+    await navigator.clipboard?.writeText(recipe.prompt);
+    setRecipeNotice('保存済みプロンプトをコピーしました。');
+  };
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -284,7 +375,9 @@ If Rendering type is photographic, do not create illustration, digital painting,
         <div className="action-row">
           <button onClick={randomizeCombo} className="sub-button with-icon"><img src="/assets/icon-random.svg" alt="" />今日の変な組み合わせ</button>
           <button onClick={() => setOpenPreview((v) => !v)} className="sub-button">プロンプトを見る</button>
+          <button onClick={handleSaveRecipe} disabled={!canSaveRecipe} className="recipe-save-button">調合レシピを保存</button>
         </div>
+        {recipeNotice && <p className="recipe-notice">{recipeNotice}</p>}
 
         {openPreview && (
           <section className="card">
@@ -300,6 +393,29 @@ If Rendering type is photographic, do not create illustration, digital painting,
             <div className="framed-surface">
               <img src="/assets/card-frame.svg" alt="" className="frame-overlay" />
               <pre className="prompt-preview">{finalPrompt}</pre>
+            </div>
+          </section>
+        )}
+
+        {savedRecipes.length > 0 && (
+          <section className="card recipe-card">
+            <p className="section-title with-icon"><img src="/assets/icon-bottle.svg" alt="" />保存した調合レシピ</p>
+            <p className="section-note">題材は保存せず、気に入った雰囲気の組み合わせだけをこのブラウザに保存しています。</p>
+            <div className="recipe-list">
+              {savedRecipes.map((recipe) => (
+                <article key={recipe.id} className="recipe-item">
+                  <div>
+                    <p className="recipe-name">{recipe.name}</p>
+                    <p className="recipe-meta">{recipe.useCase} / {recipe.selectedAspectRatio} / {recipe.selectedRenderingType}</p>
+                    <p className="recipe-tags">{recipe.selectedBases.join(' × ')} + {recipe.selectedAccents.join(' × ')}</p>
+                  </div>
+                  <div className="recipe-actions">
+                    <button onClick={() => handleLoadRecipe(recipe)} className="sub-button">呼び出す</button>
+                    <button onClick={() => handleCopyRecipePrompt(recipe)} className="sub-button">コピー</button>
+                    <button onClick={() => handleDeleteRecipe(recipe.id)} className="sub-button danger-button">削除</button>
+                  </div>
+                </article>
+              ))}
             </div>
           </section>
         )}
