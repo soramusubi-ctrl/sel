@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 type MixStrength = 'ほんのり' | '半分ずつ' | '大胆に' | '実験的' | '商用向けに整える';
 type UseCase = 'SNS投稿' | '投稿表紙' | '記事ヘッダー' | 'エッセイ挿絵' | '解説カード' | '商品ポップ' | '紹介画像' | 'LPキービジュアル' | '印刷カード';
+type RenderingType = 'デフォルメ' | 'イラスト寄り' | 'アニメ寄り' | 'セミリアル' | 'リアル寄り' | '写真風';
 type AtmosphereType = 'おまかせ' | '朝の光' | '夕方の光' | '逆光' | 'やわらかい自然光' | '映画のような光' | 'スタジオ撮影風' | '雨上がり' | '冬の透明感' | '夏の湿度' | '夜のネオン';
 
-const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌挿絵', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風', '実写投稿風'] as const;
+const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌挿絵', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風'] as const;
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
 const mixStrengths: MixStrength[] = ['ほんのり', '半分ずつ', '大胆に', '実験的', '商用向けに整える'];
 const useCases: UseCase[] = ['SNS投稿', '投稿表紙', '記事ヘッダー', 'エッセイ挿絵', '解説カード', '商品ポップ', '紹介画像', 'LPキービジュアル', '印刷カード'];
+const renderingTypes: RenderingType[] = ['デフォルメ', 'イラスト寄り', 'アニメ寄り', 'セミリアル', 'リアル寄り', '写真風'];
 const textures = ['艶のあるタッチ', 'マットな質感', '透明感', 'やわらかい発光感', '高級感のある光沢', 'フィルム写真風', '淡い粒子感', 'なめらかなデジタルペイント', 'ざらっとした紙質感'] as const;
 const atmosphereTypes: AtmosphereType[] = ['おまかせ', '朝の光', '夕方の光', '逆光', 'やわらかい自然光', '映画のような光', 'スタジオ撮影風', '雨上がり', '冬の透明感', '夏の湿度', '夜のネオン'];
 const USAGE_KEY = 'atelier-daily-generate-usage';
@@ -33,41 +35,13 @@ const useCaseMap: Record<UseCase, string> = {
   '印刷カード': 'Keep print-friendly balance with stable margins, legibility, and whitespace suitable for handout/card usage.',
 };
 
-const baseStyleMap: Partial<Record<string, string>> = {
-  '実写投稿風': 'Create a social-media-ready photorealistic image with natural camera perspective, realistic lighting, believable depth of field, lifelike materials, natural shadows, photographic color grading, and a composition suitable for posts or article thumbnails. Prioritize real-world plausibility over illustration. Avoid cartoon outlines, flat vector shapes, and storybook stylization unless another selected style intentionally softens the result.',
-  'バンドデシネ風': 'Use a European bande dessinée inspired visual language with mature comic composition, refined vintage mood, hand-drawn line character, and editorial warmth.',
-  'フラットイラスト': 'Use simplified flat illustration structure, clear silhouettes, minimal depth, tidy color blocks, and high readability for communication design.',
-  'ヴィンテージ挿絵': 'Use a nostalgic editorial illustration mood with aged print charm, restrained palette, subtle paper texture, and classic composition.',
-  '大人の絵本': 'Use a gentle storybook atmosphere with mature restraint, refined composition, quiet emotion, and soft handmade warmth.',
-};
-
-const accentStyleMap: Partial<Record<string, string>> = {
-  'クレヨン': 'Use visible wax crayon strokes, uneven hand pressure, rough paper grain, layered waxy pigments, imperfect edges, soft broken lines, and tactile handmade marks. Avoid clean digital brushwork or smooth vector-like coloring.',
-  '水彩': 'Use transparent watercolor washes, soft bleeding, layered pigment, gentle color blooms, visible paper texture, and airy edges.',
-  '鉛筆スケッチ': 'Use graphite pencil lines, subtle shading, sketch marks, hand-drawn contour variation, and visible paper tooth.',
-  'リソグラフ': 'Use risograph-like limited colors, slight ink misregistration, grainy print texture, flat overlapping inks, and retro print charm.',
-  'レトロ印刷': 'Use aged print texture, limited palette, slight ink offset, faded tones, halftone-like imperfections, and vintage paper feel.',
-  'デフォルメ線画': 'Use simplified line drawing, rounded forms, reduced detail, expressive contours, and friendly readability.',
-};
-
-const textureMap: Partial<Record<string, string>> = {
-  '艶のあるタッチ': 'Add glossy highlights, smooth reflective surfaces, luminous color depth, and polished finish without becoming plastic.',
-  'マットな質感': 'Use soft non-reflective surfaces, muted highlights, gentle color absorption, and calm tactile finish.',
-  '透明感': 'Add translucent color layers, airy light, soft clarity, and delicate depth.',
-  'やわらかい発光感': 'Use gentle glow, soft bloom, warm luminous edges, and dreamy light diffusion.',
-  '高級感のある光沢': 'Use refined controlled highlights, elegant material shine, premium color depth, and sophisticated contrast.',
-  'フィルム写真風': 'Use analog film grain, soft contrast, natural color cast, slight imperfection, and nostalgic photographic texture.',
-  '淡い粒子感': 'Use subtle grain, delicate speckles, soft noise, and tactile atmospheric texture.',
-  'なめらかなデジタルペイント': 'Use smooth painterly blending, clean gradients, refined brush control, and polished digital illustration finish.',
-  'ざらっとした紙質感': 'Use rough paper grain, visible fibers, dry pigment catch, and tactile handmade surface.',
-};
-
 const App: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [selectedAccents, setSelectedAccents] = useState<string[]>([]);
   const [mixStrength, setMixStrength] = useState<MixStrength>('半分ずつ');
   const [useCase, setUseCase] = useState<UseCase>('SNS投稿');
+  const [selectedRenderingType, setSelectedRenderingType] = useState<RenderingType>('イラスト寄り');
   const [selectedTextures, setSelectedTextures] = useState<string[]>([]);
   const [selectedAtmosphere, setSelectedAtmosphere] = useState<AtmosphereType>('おまかせ');
   const [openPreview, setOpenPreview] = useState(false);
@@ -112,6 +86,7 @@ const App: React.FC = () => {
     setSelectedAccents(pick(accentStyles, Math.floor(Math.random() * 2) + 2));
     setMixStrength(mixStrengths[Math.floor(Math.random() * mixStrengths.length)]);
     setUseCase(useCases[Math.floor(Math.random() * useCases.length)]);
+    setSelectedRenderingType(renderingTypes[Math.floor(Math.random() * renderingTypes.length)]);
     setSelectedTextures(pick(textures, Math.floor(Math.random() * 2) + 1));
     setSelectedAtmosphere(atmosphereTypes[Math.floor(Math.random() * atmosphereTypes.length)]);
   };
@@ -123,15 +98,12 @@ const App: React.FC = () => {
   const finalPrompt = useMemo(() => {
     const baseLine = selectedBases.length ? selectedBases.join(' × ') : '（未選択）';
     const accentLine = selectedAccents.length ? selectedAccents.join(' × ') : '（未選択）';
-    const baseGuidance = selectedBases.map((style) => baseStyleMap[style]).filter(Boolean).join('\n');
-    const accentGuidance = selectedAccents.map((style) => accentStyleMap[style]).filter(Boolean).join('\n');
-    const textureGuidance = selectedTextures.map((texture) => textureMap[texture]).filter(Boolean).join('\n');
-
     return `Subject: ${subject || '（題材を入力してください）'}
 Base style(s): ${baseLine}
 Accent style(s): ${accentLine}
 Mix method: ${mixStrength}
 Use case: ${useCase}
+Rendering type: ${selectedRenderingType}
 Texture: ${selectedTextures.length ? selectedTextures.join(' × ') : '（未選択）'}
 Light and atmosphere: ${selectedAtmosphere}
 
@@ -139,17 +111,15 @@ Base style defines the overall composition, visual structure, layout, and primar
 Accent style should influence texture, mood, decorative details, color feeling, and small visual surprises.
 Do not let the accent style overpower the base style.
 Blend them harmoniously into one coherent visual language.
+Rendering type controls the degree of realism, stylization, and character detail.
 Texture controls surface finish, brush feel, material impression, grain, gloss, and softness.
 Light and atmosphere controls time of day, air, mood, shadow, and emotional temperature.
 
 ${mixStrengthMap[mixStrength]}
 ${useCaseMap[useCase]}
-${baseGuidance ? `\nDetailed base style guidance:\n${baseGuidance}` : ''}
-${accentGuidance ? `\nDetailed accent guidance:\n${accentGuidance}` : ''}
-${textureGuidance ? `\nDetailed texture guidance:\n${textureGuidance}` : ''}
 Avoid garbled text: do not render text inside the image by default.
 If layout requires copy later, only leave clean empty space for text placement without drawing actual letters.`;
-  }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedTextures, selectedAtmosphere]);
+  }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere]);
 
   const remainingCount = Math.max(0, dailyLimit - usageCount);
   const isLimitReached = remainingCount <= 0;
@@ -211,44 +181,49 @@ If layout requires copy later, only leave clean empty space for text placement w
         </section>
 
         <section className="card">
-          <p className="section-title">ベーススタイル（最大2）</p>
+          <p className="section-title with-icon"><img src="/assets/icon-base.svg" alt="" />ベーススタイル（最大2）</p>
           <p className="section-note">絵の骨格や見え方の方向性を決めます。</p>
           <div className="chip-grid">{baseStyles.map((s) => <button key={s} onClick={() => toggleBase(s)} className={chipClass(selectedBases.includes(s))}>{s}</button>)}</div>
         </section>
 
         <section className="card">
-          <p className="section-title">アクセントスタイル（最大3）</p>
+          <p className="section-title with-icon"><img src="/assets/icon-accent.svg" alt="" />アクセントスタイル（最大3）</p>
           <p className="section-note">質感・空気感・色・装飾のニュアンスを足します。</p>
           <div className="chip-grid">{accentStyles.map((s) => <button key={s} onClick={() => toggleAccent(s)} className={chipClass(selectedAccents.includes(s))}>{s}</button>)}</div>
         </section>
 
         <section className="grid-two">
           <div className="card">
-            <p className="section-title">混ぜ方</p>
+            <p className="section-title with-icon"><img src="/assets/icon-mix.svg" alt="" />混ぜ方</p>
             <p className="section-note">どのくらい大胆に混ぜるかを決めます。</p>
             <div className="chip-grid">{mixStrengths.map((m) => <button key={m} onClick={() => setMixStrength(m)} className={chipClass(mixStrength === m)}>{m}</button>)}</div>
           </div>
           <div className="card">
-            <p className="section-title">用途</p>
+            <p className="section-title with-icon"><img src="/assets/icon-usecase.svg" alt="" />用途</p>
             <p className="section-note">どこで見せる画像かを選び、余白・視認性・レイアウトの方向を整えます。</p>
             <div className="chip-grid">{useCases.map((u) => <button key={u} onClick={() => setUseCase(u)} className={chipClass(useCase === u)}>{u}</button>)}</div>
           </div>
         </section>
         <section className="grid-two">
           <div className="card">
-            <p className="section-title">光・空気感（1つ）</p>
+            <p className="section-title with-icon"><img src="/assets/icon-rendering.svg" alt="" />描写タイプ（1つ）</p>
+            <p className="section-note">写実度・キャラクターの立体感・描き込み量を調整します。</p>
+            <div className="chip-grid">{renderingTypes.map((r) => <button key={r} onClick={() => setSelectedRenderingType(r)} className={chipClass(selectedRenderingType === r)}>{r}</button>)}</div>
+          </div>
+          <div className="card">
+            <p className="section-title with-icon"><img src="/assets/icon-light.svg" alt="" />光・空気感（1つ）</p>
             <p className="section-note">時間帯や季節感、影と空気の温度感を決めます。</p>
             <div className="chip-grid">{atmosphereTypes.map((a) => <button key={a} onClick={() => setSelectedAtmosphere(a)} className={chipClass(selectedAtmosphere === a)}>{a}</button>)}</div>
           </div>
-          <div className="card">
-            <p className="section-title">質感（最大2）</p>
-            <p className="section-note">表面の質感・色の乗り方・光沢・粒子・紙感に効かせます。</p>
-            <div className="chip-grid">{textures.map((t) => <button key={t} onClick={() => toggleTexture(t)} className={chipClass(selectedTextures.includes(t))}>{t}</button>)}</div>
-          </div>
+        </section>
+        <section className="card">
+          <p className="section-title with-icon"><img src="/assets/icon-texture.svg" alt="" />質感（最大2）</p>
+          <p className="section-note">表面の質感・色の乗り方・光沢・粒子・紙感に効かせます。</p>
+          <div className="chip-grid">{textures.map((t) => <button key={t} onClick={() => toggleTexture(t)} className={chipClass(selectedTextures.includes(t))}>{t}</button>)}</div>
         </section>
 
         <div className="action-row">
-          <button onClick={randomizeCombo} className="sub-button">今日の変な組み合わせ</button>
+          <button onClick={randomizeCombo} className="sub-button with-icon"><img src="/assets/icon-random.svg" alt="" />今日の変な組み合わせ</button>
           <button onClick={() => setOpenPreview((v) => !v)} className="sub-button">プロンプトを見る</button>
         </div>
 
