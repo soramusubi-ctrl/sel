@@ -76,3 +76,14 @@
 .error-note { margin: 8px 4px 0; color: #c23333; font-size: .9rem; }
 .result-image { width: 100%; border-radius: 16px; border: 1px solid #d9cfbf; background: #fff; }
 .result-placeholder p { margin: 10px 4px 0; color: #7f7365; font-size: .92rem; }
+.download-button {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #cdbfa8;
+  background: #fff9ef;
+  color: #3f3529;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
