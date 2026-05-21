@@ -415,7 +415,14 @@ If Rendering type is photographic, do not create illustration, digital painting,
           {!canGenerate && <p className="disabled-note">{disabledReason}</p>}
           {error && <p className="error-note">{error}</p>}
         </section>
-        {!generatedImage && (
+        {isLoading && (
+          <section className="loading-card" aria-live="polite">
+            <img src="/assets/loading-workbench.svg" alt="雰囲気を調合している作業台" className="loading-illustration" />
+            <p className="loading-title">雰囲気を調合中です</p>
+            <p className="loading-note">作業台で、選んだ素材をあれこれ混ぜています。</p>
+          </section>
+        )}
+        {!generatedImage && !isLoading && (
           <div className="result-placeholder">
             <img src="/assets/empty-preview.svg" alt="生成前プレビュー" className="result-image" />
             <p>まだ名前のない絵を待っています。</p>
