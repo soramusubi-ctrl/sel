@@ -4,6 +4,7 @@ type MixStrength = 'ほんのり' | '半分ずつ' | '大胆に' | '実験的' |
 type UseCase = 'SNS投稿' | '投稿表紙' | '記事ヘッダー' | 'エッセイ挿絵' | '解説カード' | '商品ポップ' | '紹介画像' | 'LPキービジュアル' | '印刷カード';
 type RenderingType = 'デフォルメ' | 'イラスト寄り' | 'アニメ寄り' | 'セミリアル' | 'リアル寄り' | '写真風';
 type AtmosphereType = 'おまかせ' | '朝の光' | '夕方の光' | '逆光' | 'やわらかい自然光' | '映画のような光' | 'スタジオ撮影風' | '雨上がり' | '冬の透明感' | '夏の湿度' | '夜のネオン';
+type OutputSize = 'SNS投稿 1:1' | '縦長投稿 4:5' | 'ストーリー 9:16' | '横長サムネ 16:9' | '記事ヘッダー 3:1' | '印刷カード A4';
 
 const baseStyles = ['絵本', '大人の絵本', '漫画', '雑誌挿絵', '図解インフォグラフィック', '教材イラスト', '児童書カット', 'ポスターイラスト', 'ヴィンテージ挿絵', 'フラットイラスト', 'バンドデシネ風'] as const;
 const accentStyles = ['現代アート', '水彩', '民藝', '和紙', 'リソグラフ', '鉛筆スケッチ', 'クレヨン', '博物図鑑', 'レトロ印刷', '北欧', 'ミニマル', 'コラージュ', '夢日記', '古い教科書', 'デフォルメ線画'] as const;
@@ -12,6 +13,7 @@ const useCases: UseCase[] = ['SNS投稿', '投稿表紙', '記事ヘッダー', 
 const renderingTypes: RenderingType[] = ['デフォルメ', 'イラスト寄り', 'アニメ寄り', 'セミリアル', 'リアル寄り', '写真風'];
 const textures = ['艶のあるタッチ', 'マットな質感', '透明感', 'やわらかい発光感', '高級感のある光沢', 'フィルム写真風', '淡い粒子感', 'なめらかなデジタルペイント', 'ざらっとした紙質感'] as const;
 const atmosphereTypes: AtmosphereType[] = ['おまかせ', '朝の光', '夕方の光', '逆光', 'やわらかい自然光', '映画のような光', 'スタジオ撮影風', '雨上がり', '冬の透明感', '夏の湿度', '夜のネオン'];
+const outputSizes: OutputSize[] = ['SNS投稿 1:1', '縦長投稿 4:5', 'ストーリー 9:16', '横長サムネ 16:9', '記事ヘッダー 3:1', '印刷カード A4'];
 const USAGE_KEY = 'atelier-daily-generate-usage';
 const dailyLimit = 3;
 
@@ -35,6 +37,33 @@ const useCaseMap: Record<UseCase, string> = {
   '印刷カード': 'Keep print-friendly balance with stable margins, legibility, and whitespace suitable for handout/card usage.',
 };
 
+const renderingOpeningMap: Record<RenderingType, string> = {
+  'デフォルメ': 'Create a stylized illustration.',
+  'イラスト寄り': 'Create a polished illustration.',
+  'アニメ寄り': 'Create an anime-inspired illustration.',
+  'セミリアル': 'Create a semi-realistic illustration.',
+  'リアル寄り': 'Create a realistic-leaning illustration.',
+  '写真風': 'Create a photographic-style image.',
+};
+
+const renderingGuideMap: Record<RenderingType, string> = {
+  'デフォルメ': 'Use simplified proportions, charming exaggeration, and friendly symbolic shapes.',
+  'イラスト寄り': 'Use a polished illustration style with clear forms, balanced detail, and approachable visual warmth.',
+  'アニメ寄り': 'Use anime-inspired stylization with expressive shapes, clean visual rhythm, and appealing character design.',
+  'セミリアル': 'Use a semi-realistic rendering style that keeps the image artistic while adding believable depth, volume, lighting, and material detail.',
+  'リアル寄り': 'Use a realistic-leaning rendering style with more natural anatomy, perspective, texture, and environmental detail.',
+  '写真風': 'Use a photographic impression with natural lighting, lens-like depth, and realistic surface detail while preserving the selected art direction.',
+};
+
+const outputSizeMap: Record<OutputSize, string> = {
+  'SNS投稿 1:1': 'Square 1:1 composition suitable for social media posts. Keep the subject readable and balanced.',
+  '縦長投稿 4:5': 'Vertical 4:5 composition suitable for Instagram or Threads-style feed images. Keep the main subject clear with safe margins.',
+  'ストーリー 9:16': 'Tall 9:16 composition suitable for stories or short-video covers. Keep important elements away from the top and bottom edges.',
+  '横長サムネ 16:9': 'Wide 16:9 composition suitable for thumbnails and horizontal previews. Use strong focal hierarchy and leave room for optional title overlay.',
+  '記事ヘッダー 3:1': 'Wide banner-like 3:1 composition suitable for article headers. Use generous negative space and calm horizontal rhythm.',
+  '印刷カード A4': 'Print-friendly A4 composition with balanced margins and stable readability.',
+};
+
 const App: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
@@ -44,6 +73,7 @@ const App: React.FC = () => {
   const [selectedRenderingType, setSelectedRenderingType] = useState<RenderingType>('イラスト寄り');
   const [selectedTextures, setSelectedTextures] = useState<string[]>([]);
   const [selectedAtmosphere, setSelectedAtmosphere] = useState<AtmosphereType>('おまかせ');
+  const [selectedOutputSize, setSelectedOutputSize] = useState<OutputSize>('SNS投稿 1:1');
   const [openPreview, setOpenPreview] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -89,6 +119,7 @@ const App: React.FC = () => {
     setSelectedRenderingType(renderingTypes[Math.floor(Math.random() * renderingTypes.length)]);
     setSelectedTextures(pick(textures, Math.floor(Math.random() * 2) + 1));
     setSelectedAtmosphere(atmosphereTypes[Math.floor(Math.random() * atmosphereTypes.length)]);
+    setSelectedOutputSize(outputSizes[Math.floor(Math.random() * outputSizes.length)]);
   };
 
   const toggleTexture = (texture: string) => {
@@ -98,28 +129,59 @@ const App: React.FC = () => {
   const finalPrompt = useMemo(() => {
     const baseLine = selectedBases.length ? selectedBases.join(' × ') : '（未選択）';
     const accentLine = selectedAccents.length ? selectedAccents.join(' × ') : '（未選択）';
-    return `Subject: ${subject || '（題材を入力してください）'}
-Base style(s): ${baseLine}
-Accent style(s): ${accentLine}
-Mix method: ${mixStrength}
-Use case: ${useCase}
-Rendering type: ${selectedRenderingType}
-Texture: ${selectedTextures.length ? selectedTextures.join(' × ') : '（未選択）'}
-Light and atmosphere: ${selectedAtmosphere}
+    const textureLine = selectedTextures.length ? selectedTextures.join(' × ') : 'None';
+    const atmosphereLine = selectedAtmosphere === 'おまかせ' ? 'Auto, choose the most suitable light and atmosphere for the subject and use case.' : selectedAtmosphere;
 
+    return `${renderingOpeningMap[selectedRenderingType]}
+
+Subject:
+${subject || '（題材を入力してください）'}
+
+Use case:
+${useCase}
+${useCaseMap[useCase]}
+
+Output size:
+${selectedOutputSize}
+${outputSizeMap[selectedOutputSize]}
+
+Base style:
+${baseLine}
+
+Rendering type:
+${selectedRenderingType}
+${renderingGuideMap[selectedRenderingType]}
+
+Accent style:
+${accentLine}
+
+Texture:
+${textureLine}
+
+Light and atmosphere:
+${atmosphereLine}
+
+Mix method:
+${mixStrength}
+${mixStrengthMap[mixStrength]}
+
+Composition:
+Create a clear, usable composition for the selected use case and output size.
+Leave clean empty space, label areas, blank frames, or caption-safe margins for adding text later.
+
+Style balance:
 Base style defines the overall composition, visual structure, layout, and primary rendering method.
+Rendering type controls the degree of realism, stylization, volume, depth, and character/detail rendering.
 Accent style should influence texture, mood, decorative details, color feeling, and small visual surprises.
-Do not let the accent style overpower the base style.
-Blend them harmoniously into one coherent visual language.
-Rendering type controls the degree of realism, stylization, and character detail.
 Texture controls surface finish, brush feel, material impression, grain, gloss, and softness.
 Light and atmosphere controls time of day, air, mood, shadow, and emotional temperature.
+Do not let the accent style overpower the base style.
+Blend everything into one coherent visual language.
 
-${mixStrengthMap[mixStrength]}
-${useCaseMap[useCase]}
-Avoid garbled text: do not render text inside the image by default.
-If layout requires copy later, only leave clean empty space for text placement without drawing actual letters.`;
-  }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere]);
+Restrictions:
+Do not render text inside the image.
+Do not add logos, watermarks, random letters, unreadable symbols, or unrelated objects.`;
+  }, [subject, selectedBases, selectedAccents, mixStrength, useCase, selectedRenderingType, selectedTextures, selectedAtmosphere, selectedOutputSize]);
 
   const remainingCount = Math.max(0, dailyLimit - usageCount);
   const isLimitReached = remainingCount <= 0;
@@ -160,6 +222,18 @@ If layout requires copy later, only leave clean empty space for text placement w
   };
 
   const chipClass = (active: boolean) => `chip ${active ? 'is-active' : ''}`;
+  const handleDownload = () => {
+    if (!generatedImage) return;
+    const d = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const name = `funiki-atelier-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.png`;
+    const a = document.createElement('a');
+    a.href = generatedImage;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   return (
     <main className="atelier-page">
@@ -203,6 +277,11 @@ If layout requires copy later, only leave clean empty space for text placement w
             <p className="section-note">どこで見せる画像かを選び、余白・視認性・レイアウトの方向を整えます。</p>
             <div className="chip-grid">{useCases.map((u) => <button key={u} onClick={() => setUseCase(u)} className={chipClass(useCase === u)}>{u}</button>)}</div>
           </div>
+        </section>
+        <section className="card">
+          <p className="section-title with-icon"><img src="/assets/icon-usecase.svg" alt="" />出力サイズ</p>
+          <p className="section-note">投稿・記事・印刷に合わせて、画像の比率と余白を整えます。</p>
+          <div className="chip-grid">{outputSizes.map((s) => <button key={s} onClick={() => setSelectedOutputSize(s)} className={chipClass(selectedOutputSize === s)}>{s}</button>)}</div>
         </section>
         <section className="grid-two">
           <div className="card">
@@ -257,7 +336,12 @@ If layout requires copy later, only leave clean empty space for text placement w
             <p>まだ名前のない絵を待っています。</p>
           </div>
         )}
-        {generatedImage && <img src={generatedImage} alt="generated" className="result-image" />}
+        {generatedImage && (
+          <>
+            <img src={generatedImage} alt="generated" className="result-image" />
+            <button onClick={handleDownload} className="download-button">画像をダウンロード</button>
+          </>
+        )}
       </div>
     </main>
   );
